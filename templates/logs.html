@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block title %}迁移日志{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <span>📝 迁移日志</span>
+        <form style="display:flex;gap:8px;align-items:center;" method="get">
+            <select name="table" style="padding:6px 10px;border-radius:6px;border:1px solid #d0d7de;">
+                <option value="">全部表</option>
+                {% for t in tables %}
+                <option value="{{ t }}" {% if t == table %}selected{% endif %}>{{ t }}</option>
+                {% endfor %}
+            </select>
+            <button class="btn btn-sm btn-primary">筛选</button>
+        </form>
+    </div>
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>ID</th><th>表</th><th>批次</th>
+                    <th>主键范围</th><th>行数</th>
+                    <th>结果</th><th>开始</th><th>结束</th><th>错误</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if logs %}
+                    {% for l in logs %}
+                    <tr>
+                        <td>{{ l.id }}</td>
+                        <td><code>{{ l.table_name }}</code></td>
+                        <td>{{ l.batch_no }}</td>
+                        <td><code style="font-size:12px;">{{ l.from_pk or '' }} → {{ l.to_pk or '' }}</code></td>
+                        <td>{{ l.row_count }}</td>
+                        <td>
+                            {% if l.success %}
+                                <span class="badge badge-success">成功</span>
+                            {% else %}
+                                <span class="badge badge-danger">失败</span>
+                            {% endif %}
+                        </td>
+                        <td><small>{{ l.start_at }}</small></td>
+                        <td><small>{{ l.end_at }}</small></td>
+                        <td><small style="color:#dc3545;">{{ l.err_msg or '' }}</small></td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr><td colspan="9" style="text-align:center;color:#6c757d;">暂无日志</td></tr>
+                {% endif %}
+            </tbody>
+        </table>
+        <div style="color:#6c757d;font-size:12px;margin-top:12px;">
+            显示最近 200 条迁移批次记录；完整日志见 logs/migrate.log。
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}请假出差数据迁移工具{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+<header class="topbar">
+    <div class="brand">📦 请假出差数据迁移工具</div>
+    <nav class="nav-links">
+        <a href="/">概览</a>
+        <a href="/config">数据库配置</a>
+        <a href="/tables">表管理</a>
+        <a href="/progress">迁移进度</a>
+        <a href="/logs">迁移日志</a>
+    </nav>
+    <div class="status" id="navState">空闲</div>
+</header>
+
+<main class="main-content">
+{% block content %}{% endblock %}
+</main>
+
+<div class="modal-mask" id="toastModal" onclick="hideToast(event)">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <span id="toastTitle">提示</span>
+            <button class="modal-close" onclick="hideToast()">×</button>
+        </div>
+        <div class="modal-body" id="toastBody"></div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="hideToast()">关闭</button>
+        </div>
+    </div>
+</div>
+
+<div class="modal-mask" id="mappingModal" onclick="if(event.target===this) hideMapping()">
+    <div class="modal modal-xl" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <span>字段映射 - <span id="mappingTitle"></span></span>
+            <button class="modal-close" onclick="hideMapping()">×</button>
+        </div>
+        <div class="modal-body">
+            <div id="mappingNotes" class="alert alert-info" style="display:none;"></div>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>目标字段 (V5)</th>
+                        <th>源字段 (R1)</th>
+                        <th>默认值</th>
+                        <th>来源</th>
+                    </tr>
+                </thead>
+                <tbody id="mappingBody"></tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="modal-mask" id="migrateModal" onclick="if(event.target===this) hideMigrate()">
+    <div class="modal" onclick="event.stopPropagation()">
+        <div class="modal-header">
+            <span>启动迁移 - <span id="migTitle"></span></span>
+            <button class="modal-close" onclick="hideMigrate()">×</button>
+        </div>
+        <div class="modal-body">
+            <div class="form-row">
+                <label>批次大小</label>
+                <input type="number" id="migPageSize" value="500" min="10" max="5000">
+            </div>
+            <div class="form-row">
+                <label>时间范围 - 起</label>
+                <input type="datetime-local" id="migTimeFrom">
+            </div>
+            <div class="form-row">
+                <label>时间范围 - 止</label>
+                <input type="datetime-local" id="migTimeTo" value="2025-12-31T23:59:59">
+            </div>
+            <div class="form-hint">默认迁移 2026 年之前的数据（止时间 2025-12-31 23:59:59）。</div>
+            <div class="form-hint">主键冲突自动跳过。</div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn btn-secondary" onclick="hideMigrate()">取消</button>
+            <button class="btn btn-success" onclick="doStart()">确认启动</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function toast(msg, title='提示', isError=false) {
+    document.getElementById('toastTitle').innerText = title;
+    document.getElementById('toastBody').innerText = msg;
+    document.getElementById('toastTitle').style.color = isError ? '#dc3545' : '#0d6efd';
+    document.getElementById('toastModal').classList.add('show');
+}
+function hideToast(e) {
+    if (e && e.target !== document.getElementById('toastModal')) return;
+    document.getElementById('toastModal').classList.remove('show');
+}
+function hideMapping() { document.getElementById('mappingModal').classList.remove('show'); }
+function hideMigrate() { document.getElementById('migrateModal').classList.remove('show'); }
+
+async function postJSON(url, data) {
+    try {
+        const r = await fetch(url, {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify(data || {})
+        });
+        return await r.json();
+    } catch (e) {
+        return {code: 1, msg: e.toString()};
+    }
+}
+async function getJSON(url) {
+    try {
+        const r = await fetch(url);
+        return await r.json();
+    } catch (e) {
+        return {code: 1, msg: e.toString()};
+    }
+}
+
+let _navPollTimer = null;
+async function refreshNavState() {
+    if (document.hidden) return;
+    const r = await getJSON('/api/progress');
+    if (r.code !== 0) return;
+    const st = r.data.state;
+    document.getElementById('navState').innerText =
+        st.running ? ('🟢 迁移中: ' + (st.current_table || '-'))
+                   : '⚪ 空闲';
+}
+function startNavPolling() {
+    if (_navPollTimer) return;
+    refreshNavState();
+    _navPollTimer = setInterval(refreshNavState, 5000);
+}
+function stopNavPolling() {
+    if (_navPollTimer) {
+        clearInterval(_navPollTimer);
+        _navPollTimer = null;
+    }
+}
+startNavPolling();
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopNavPolling();
+    else startNavPolling();
+});
+</script>
+{% block scripts %}{% endblock %}
+</body>
+</html>

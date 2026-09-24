@@ -1,0 +1,211 @@
+/* ===== 重置 ===== */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; }
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei",
+                 "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: #f5f7fa;
+    color: #2c3e50;
+    font-size: 14px;
+    line-height: 1.5;
+}
+a { color: #0d6efd; text-decoration: none; }
+a:hover { text-decoration: underline; }
+code { background: #f1f3f5; padding: 1px 6px; border-radius: 3px; color: #d63384; font-size: 13px; }
+
+/* ===== 顶栏 ===== */
+.topbar {
+    display: flex; align-items: center; justify-content: space-between;
+    background: linear-gradient(135deg, #1a73e8, #0d47a1);
+    color: #fff; padding: 12px 24px;
+    box-shadow: 0 2px 6px rgba(0,0,0,.08);
+}
+.topbar .brand { font-size: 18px; font-weight: 600; }
+.topbar .nav-links { display: flex; gap: 24px; flex: 1; margin-left: 36px; }
+.topbar .nav-links a { color: #fff; opacity: .85; }
+.topbar .nav-links a:hover { opacity: 1; text-decoration: none; }
+.topbar .status {
+    background: rgba(255,255,255,.18); padding: 6px 14px; border-radius: 16px;
+    font-size: 13px;
+}
+
+.main-content { padding: 24px; max-width: 1400px; margin: 0 auto; }
+
+/* ===== 卡片 ===== */
+.card {
+    background: #fff; border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06);
+    margin-bottom: 18px; overflow: hidden;
+}
+.card-header {
+    padding: 12px 18px; background: #f8f9fb;
+    border-bottom: 1px solid #e8edf2;
+    font-weight: 600;
+}
+.card-body { padding: 18px; }
+.row { display: grid; gap: 16px; margin-bottom: 16px; }
+.row.g-3 { grid-template-columns: repeat(4, 1fr); }
+.row.g-2 { grid-template-columns: repeat(2, 1fr); }
+.row.g-1 { grid-template-columns: 1fr; }
+.row.g-cols-6 { grid-template-columns: repeat(6, 1fr); }
+.row.g-cols-5 { grid-template-columns: repeat(5, 1fr); }
+.row.g-cols-4 { grid-template-columns: repeat(4, 1fr); }
+.row.g-cols-3 { grid-template-columns: repeat(3, 1fr); }
+.row.g-cols-2 { grid-template-columns: repeat(2, 1fr); }
+.col { min-width: 0; }
+
+/* ===== 表单 ===== */
+.form-row { margin-bottom: 12px; }
+.form-row label {
+    display: block; margin-bottom: 6px; font-weight: 500;
+    color: #495057;
+}
+.form-row input, .form-row select {
+    width: 100%; padding: 8px 12px; border: 1px solid #d0d7de;
+    border-radius: 6px; font-size: 14px; transition: border-color .15s, box-shadow .15s;
+}
+.form-row input:focus, .form-row select:focus {
+    outline: none; border-color: #0d6efd;
+    box-shadow: 0 0 0 3px rgba(13,110,253,.25);
+}
+.form-hint { font-size: 12px; color: #6c757d; margin-top: 6px; }
+
+/* ===== 按钮 ===== */
+.btn {
+    display: inline-block; padding: 6px 14px;
+    border: 1px solid transparent; border-radius: 6px;
+    font-size: 13px; cursor: pointer;
+    transition: all .15s ease-in-out;
+    background: #fff; color: #2c3e50;
+    margin-right: 4px;
+}
+.btn:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,.08); }
+.btn-primary { background: #0d6efd; color: #fff; border-color: #0d6efd; }
+.btn-success { background: #28a745; color: #fff; border-color: #28a745; }
+.btn-warning { background: #ffc107; color: #212529; border-color: #ffc107; }
+.btn-danger { background: #dc3545; color: #fff; border-color: #dc3545; }
+.btn-secondary { background: #6c757d; color: #fff; border-color: #6c757d; }
+.btn-outline-primary { color: #0d6efd; border-color: #0d6efd; background: #fff; }
+.btn-outline-success { color: #28a745; border-color: #28a745; background: #fff; }
+.btn-outline-warning { color: #b8860b; border-color: #ffc107; background: #fff; }
+.btn-outline-danger { color: #dc3545; border-color: #dc3545; background: #fff; }
+.btn-outline-info { color: #0dcaf0; border-color: #0dcaf0; background: #fff; }
+.btn-outline-secondary { color: #6c757d; border-color: #6c757d; background: #fff; }
+.btn-sm { padding: 4px 10px; font-size: 12px; }
+
+/* ===== 表格 ===== */
+.data-table {
+    width: 100%; border-collapse: separate; border-spacing: 0;
+    background: #fff; border: 1px solid #e8edf2; border-radius: 6px; overflow: hidden;
+}
+.data-table th, .data-table td {
+    padding: 10px 12px; text-align: left;
+    border-bottom: 1px solid #eef2f6;
+}
+.data-table th {
+    background: #f8f9fb; font-weight: 600; color: #495057;
+}
+.data-table tr:hover td { background: #f8fbff; }
+.data-table tr:last-child td { border-bottom: none; }
+
+/* ===== 徽章 ===== */
+.badge {
+    display: inline-block; padding: 2px 8px;
+    border-radius: 10px; font-size: 12px; font-weight: 500;
+    background: #e9ecef; color: #495057;
+}
+.badge.bg-success, .badge-success { background: #198754; color: #fff; }
+.badge.bg-warning, .badge-warning { background: #ffc107; color: #212529; }
+.badge.bg-danger, .badge-danger { background: #dc3545; color: #fff; }
+.badge.bg-primary, .badge-primary { background: #0d6efd; color: #fff; }
+.badge.bg-secondary, .badge-secondary { background: #6c757d; color: #fff; }
+.badge.bg-info, .badge-info { background: #0dcaf0; color: #fff; }
+
+/* ===== 进度条 ===== */
+.progress {
+    background: #e9ecef; border-radius: 4px; overflow: hidden;
+    height: 12px;
+}
+.progress-bar {
+    background: #0d6efd; height: 100%; transition: width .4s ease;
+}
+.progress-bar.bg-success { background: #28a745; }
+.progress-bar.bg-warning { background: #ffc107; }
+.progress-bar.bg-danger { background: #dc3545; }
+
+/* ===== 警告 / 提示 ===== */
+.alert {
+    padding: 10px 14px; border-radius: 6px; margin-bottom: 14px;
+    border: 1px solid transparent;
+}
+.alert-info { background: #e7f3ff; border-color: #b6daff; color: #084c93; }
+.alert-warning { background: #fff7e6; border-color: #ffe2a8; color: #8a5a00; }
+.alert-danger { background: #fdebec; border-color: #f6b8bf; color: #842029; }
+
+/* ===== 弹窗 ===== */
+.modal-mask {
+    position: fixed; inset: 0; background: rgba(0,0,0,.5);
+    display: none; align-items: center; justify-content: center;
+    z-index: 1000;
+}
+.modal-mask.show { display: flex; }
+.modal {
+    background: #fff; border-radius: 8px;
+    min-width: 480px; max-width: 92vw; max-height: 88vh;
+    display: flex; flex-direction: column;
+    box-shadow: 0 16px 48px rgba(0,0,0,.18);
+}
+.modal.modal-xl { min-width: 70vw; }
+.modal-header {
+    padding: 14px 20px; border-bottom: 1px solid #e8edf2;
+    font-weight: 600; display: flex; justify-content: space-between; align-items: center;
+}
+.modal-header span { font-size: 15px; }
+.modal-close {
+    border: 0; background: transparent; font-size: 22px;
+    color: #6c757d; cursor: pointer; line-height: 1;
+}
+.modal-close:hover { color: #dc3545; }
+.modal-body { padding: 18px 20px; overflow-y: auto; }
+.modal-footer {
+    padding: 12px 20px; border-top: 1px solid #e8edf2;
+    text-align: right; background: #f8f9fb;
+}
+.modal-body pre, .modal-body code { white-space: pre-wrap; word-break: break-word; }
+
+/* ===== 文本色 ===== */
+.text-success { color: #198754; }
+.text-danger { color: #dc3545; }
+.text-warning { color: #b8860b; }
+.text-muted { color: #6c757d; }
+.text-primary { color: #0d6efd; }
+.text-center { text-align: center; }
+.mt-1 { margin-top: 6px; }
+.mt-2 { margin-top: 12px; }
+.mt-3 { margin-top: 18px; }
+.mb-1 { margin-bottom: 6px; }
+.mb-2 { margin-bottom: 12px; }
+.ms-2 { margin-left: 8px; }
+.me-2 { margin-right: 8px; }
+
+/* ===== 概览统计卡片 ===== */
+.summary-card {
+    background: linear-gradient(135deg, #f8fbff, #fff);
+    padding: 22px; border-radius: 8px; text-align: center;
+    border: 1px solid #e8edf2;
+}
+.summary-card .label { font-size: 13px; color: #6c757d; }
+.summary-card .value { font-size: 32px; font-weight: 700; margin: 6px 0; }
+.summary-card .value.text-success { color: #198754; }
+.summary-card .value.text-danger { color: #dc3545; }
+.summary-card .value.text-primary { color: #0d6efd; }
+
+/* ===== 字段映射表 ===== */
+.data-table td .src-cmp { color: #198754; }
+.data-table td .src-missing { color: #adb5bd; }
+
+/* ===== 滚动条美化 ===== */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #d0d7de; border-radius: 4px; }
+::-webkit-scrollbar-thumb:hover { background: #a0a8b0; }
+::-webkit-scrollbar-track { background: transparent; }

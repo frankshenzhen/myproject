@@ -1,0 +1,7 @@
+# 运行时依赖（打包后的可执行文件自带 Python，无需安装）
+Flask>=3.0
+PyMySQL>=1.1
+APScheduler>=3.10
+
+# 构建时依赖（仅打包阶段使用，可通过 tools/build.py 自动安装）
+pyinstaller>=6.0

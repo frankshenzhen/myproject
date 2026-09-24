@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}数据库配置{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        🔌 数据库连接配置
+        <span style="font-weight:normal;color:#6c757d;margin-left:12px;">填写源库 (R1) 与目标库 (V5) 连接信息</span>
+    </div>
+    <div class="card-body">
+        <form id="cfgForm">
+            <h6 style="border-bottom:1px solid #e8edf2;padding-bottom:6px;color:#0d6efd;margin-bottom:14px;">
+                源库 (R1) - hreattendb / hrattenddb
+            </h6>
+            <div class="row g-cols-3">
+                <div class="form-row"><label>Host</label>
+                    <input name="src_host" value="{{ cfg.src_host or '' }}" placeholder="dbproxy.diwork.com"></div>
+                <div class="form-row"><label>端口</label>
+                    <input name="src_port" value="{{ cfg.src_port or '12368' }}"></div>
+                <div class="form-row"><label>数据库</label>
+                    <input name="src_db" value="{{ cfg.src_db or '' }}" placeholder="hrattenddb"></div>
+            </div>
+            <div class="row g-cols-2">
+                <div class="form-row"><label>用户名</label>
+                    <input name="src_user" value="{{ cfg.src_user or '' }}"></div>
+                <div class="form-row"><label>密码</label>
+                    <input type="password" name="src_password" value="{{ cfg.src_password or '' }}"></div>
+            </div>
+
+            <h6 style="border-bottom:1px solid #e8edf2;padding-bottom:6px;color:#198754;margin:24px 0 14px;">
+                目标库 (V5) - yonbip_hr_tm
+            </h6>
+            <div class="row g-cols-3">
+                <div class="form-row"><label>Host</label>
+                    <input name="dst_host" value="{{ cfg.dst_host or '' }}" placeholder="dbproxy.diwork.com"></div>
+                <div class="form-row"><label>端口</label>
+                    <input name="dst_port" value="{{ cfg.dst_port or '12368' }}"></div>
+                <div class="form-row"><label>数据库</label>
+                    <input name="dst_db" value="{{ cfg.dst_db or '' }}" placeholder="yonbip_hr_tm"></div>
+            </div>
+            <div class="row g-cols-2">
+                <div class="form-row"><label>用户名</label>
+                    <input name="dst_user" value="{{ cfg.dst_user or '' }}"></div>
+                <div class="form-row"><label>密码</label>
+                    <input type="password" name="dst_password" value="{{ cfg.dst_password or '' }}"></div>
+            </div>
+
+            <div style="margin-top:18px;">
+                <button type="button" class="btn btn-primary" onclick="saveConfig()">💾 保存配置</button>
+                <button type="button" class="btn btn-outline-primary" onclick="testConn('src')">🔍 测试源库</button>
+                <button type="button" class="btn btn-outline-success" onclick="testConn('dst')">🔍 测试目标库</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+async function saveConfig() {
+    const form = document.getElementById('cfgForm');
+    const fd = new FormData(form);
+    const obj = {};
+    fd.forEach((v, k) => obj[k] = v);
+    const r = await postJSON('/api/config', obj);
+    toast(r.msg, r.code === 0 ? '✅ 成功' : '❌ 错误', r.code !== 0);
+}
+async function testConn(role) {
+    const form = document.getElementById('cfgForm');
+    const fd = new FormData(form);
+    const obj = {role};
+    fd.forEach((v, k) => obj[k] = v);
+    obj.port = parseInt(obj[role + '_port'] || 3306);
+    const r = await postJSON('/api/test', obj);
+    if (r.code === 0) {
+        toast('版本：' + r.data.version + '\n表数量：' + r.data.table_count + '\n当前时间：' + r.data.now, '✅ 连接成功');
+    } else {
+        toast(r.data ? r.data.error : r.msg, '❌ 连接失败', true);
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,326 @@
+{% extends "base.html" %}
+{% block title %}表管理{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        🧩 表管理
+        <span style="font-weight:normal;color:#6c757d;margin-left:12px;">为每张表生成字段映射、设置时间范围、启动迁移</span>
+    </div>
+    <div class="card-body">
+        {% if not has_db %}
+        <div class="alert alert-warning">
+            请先在 <a href="/config">「数据库配置」</a> 配置并保存源/目标库连接。
+        </div>
+        {% endif %}
+
+        <details style="margin-bottom:14px;">
+            <summary style="cursor:pointer;color:#0d6efd;">📌 源-目标表名映射（点击展开）</summary>
+            <div style="margin-top:10px;">
+                <table class="data-table">
+                    <thead>
+                        <tr><th>源表（R1）</th><th>目标表（V5，默认为源表名）</th></tr>
+                    </thead>
+                    <tbody id="tableMapBody"></tbody>
+                </table>
+                <div class="mt-2">
+                    <button class="btn btn-sm btn-primary" onclick="saveTableMap()">💾 保存表名映射</button>
+                    <span style="color:#6c757d;font-size:12px;">留空表示与源表同名</span>
+                </div>
+            </div>
+        </details>
+
+        <details style="margin-bottom:14px;">
+            <summary style="cursor:pointer;color:#0d6efd;">🏷️ 租户 ID 映射（点击展开，可扫描源表 tenantid）</summary>
+            <div style="margin-top:10px;">
+                <div style="margin-bottom:8px;">
+                    <label style="margin-right:8px;color:#495057;">参考源表:</label>
+                    <select id="scanSrcTable" style="padding:6px 10px;border:1px solid #d0d7de;border-radius:6px;">
+                        {% for t in tables %}<option>{{ t }}</option>{% endfor %}
+                    </select>
+                    <label style="margin-left:12px;margin-right:8px;color:#495057;">租户字段:</label>
+                    <input type="text" id="scanTenantCol" value="tenantid" style="padding:6px 10px;border:1px solid #d0d7de;border-radius:6px;width:120px;">
+                    <button class="btn btn-sm btn-outline-primary" onclick="scanTenants()">🔍 扫描</button>
+                    <span style="margin-left:12px;color:#6c757d;font-size:12px;">迁移时源 tenantid → 自动套 CASE WHEN 替换为目标 ytenant_id</span>
+                </div>
+                <table class="data-table" id="tenantMapTable">
+                    <thead>
+                        <tr><th style="width:40%;">源 tenantid（R1）</th><th style="width:20%;">出现记录数</th><th>目标 ytenant_id（V5）</th></tr>
+                    </thead>
+                    <tbody id="tenantMapBody">
+                        <tr><td colspan="3" style="text-align:center;color:#6c757d;">点击「扫描」自动列出所有源 tenantid</td></tr>
+                    </tbody>
+                </table>
+                <div class="mt-2" style="display:flex;gap:8px;">
+                    <button class="btn btn-sm btn-primary" onclick="saveTenantMap()">💾 保存租户映射</button>
+                    <button class="btn btn-sm btn-outline-danger" onclick="clearTenantMap()">🗑 清空</button>
+                    <span style="line-height:30px;color:#6c757d;font-size:12px;">目标留空=不替换该租户。</span>
+                </div>
+            </div>
+        </details>
+
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>表名</th>
+                    <th>时间字段</th>
+                    <th>状态</th>
+                    <th>总数 / 已迁 / 失败</th>
+                    <th style="width:380px;">操作</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tables %}
+                    {% set task = (tasks | selectattr('table_name','equalto',t) | list | first) or {} %}
+                    {% set st = (task.status or 'pending') %}
+                    {% set colors = {'pending':'secondary','running':'success','done':'primary','paused':'warning','error':'danger'} %}
+                    <tr id="row-{{ t }}">
+                        <td><code>{{ t }}</code></td>
+                        <td><code>{{ time_fields.get(t, '-') }}</code></td>
+                        <td>
+                            <span class="badge badge-{{ colors.get(st, 'secondary') }}" id="status-{{ t }}">{{ st }}</span>
+                        </td>
+                        <td>
+                            <div>
+                                <span style="color:#6c757d;">总数</span> <b id="total-{{ t }}">{{ task.total or 0 }}</b>
+                                / <span style="color:#198754;">已迁</span> <b id="migrated-{{ t }}">{{ task.migrated or 0 }}</b>
+                                / <span style="color:#dc3545;">失败</span> <b id="failed-{{ t }}">{{ task.failed or 0 }}</b>
+                            </div>
+                            <div class="progress mt-1" style="height:6px;">
+                                <div class="progress-bar bg-success" id="bar-{{ t }}"
+                                    style="width: {{ (task.migrated or 0) / ((task.total or 1) if (task.total or 0) > 0 else 1) * 100 if task.total else 0 }}%"></div>
+                            </div>
+                        </td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary" onclick="buildMapping('{{ t }}')">生成映射</button>
+                            <button class="btn btn-sm btn-outline-info" onclick="showMapping('{{ t }}')">查看</button>
+                            <button class="btn btn-sm btn-outline-success" onclick="start('{{ t }}')">启动</button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="pause('{{ t }}')">暂停</button>
+                            <button class="btn btn-sm btn-outline-danger" onclick="reset('{{ t }}')">重置</button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="count('{{ t }}')">统计</button>
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+let _curTable = null;
+
+async function loadTableMap() {
+    const r = await getJSON('/api/table_map');
+    const m = (r.code === 0 && r.data) || {};
+    const body = document.getElementById('tableMapBody');
+    body.innerHTML = '';
+    const TABLES = {{ tables | tojson }};
+    TABLES.forEach(t => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><code>${t}</code></td>
+            <td><input type="text" id="dst_${t}" value="${(m[t] || '').replace(/"/g, '&quot;')}" placeholder="${t}" style="width:60%;padding:6px 10px;border:1px solid #d0d7de;border-radius:6px;"></td>
+        `;
+        body.appendChild(tr);
+    });
+}
+
+async function saveTableMap() {
+    const TABLES = {{ tables | tojson }};
+    const mapping = {};
+    TABLES.forEach(t => {
+        const v = document.getElementById('dst_' + t).value.trim();
+        mapping[t] = v;
+    });
+    const r = await postJSON('/api/table_map', {mapping});
+    toast(r.msg, r.code === 0 ? '✅ 已保存' : '❌ 错误', r.code !== 0);
+}
+
+async function loadTenantMap() {
+    const r = await getJSON('/api/tenant_map');
+    if (r.code !== 0 || !r.data || r.data.length === 0) return;
+    renderTenantRows(r.data.map(p => ({tenantid: p[0], count: '-', _dst: p[1]})));
+    document.querySelectorAll('#tenantMapBody input[data-tenant-src]').forEach(inp => {
+        const src = inp.getAttribute('data-tenant-src');
+        const row = r.data.find(p => p[0] === src);
+        if (row) inp.value = row[1];
+    });
+}
+
+function renderTenantRows(list) {
+    const body = document.getElementById('tenantMapBody');
+    if (!list || list.length === 0) {
+        body.innerHTML = '<tr><td colspan="3" style="text-align:center;color:#6c757d;">点击「扫描」自动列出所有源 tenantid</td></tr>';
+        return;
+    }
+    body.innerHTML = list.map(item => {
+        const src = (item.tenantid || '').replace(/"/g, '&quot;');
+        const dst = (item._dst || '');
+        return `<tr>
+            <td><code>${src}</code></td>
+            <td>${item.count}</td>
+            <td><input type="text" data-tenant-src="${src}" value="${dst.replace(/"/g, '&quot;')}"
+                       placeholder="目标 ytenant_id（V5）"
+                       style="width:90%;padding:6px 10px;border:1px solid #d0d7de;border-radius:6px;"></td>
+        </tr>`;
+    }).join('');
+}
+
+async function scanTenants() {
+    const t = document.getElementById('scanSrcTable').value;
+    const col = document.getElementById('scanTenantCol').value.trim() || 'tenantid';
+    toast('正在扫描 ' + t + '.' + col + ' …', '⏳');
+    const r = await postJSON('/api/tenant_map/scan/' + encodeURIComponent(t),
+                             {tenant_col: col});
+    if (r.code !== 0) {
+        toast(r.msg, '❌ 错误', true);
+        return;
+    }
+    const tenants = r.data.tenants;
+    const cur = r.data.existing_map || {};
+    const merged = tenants.map(t => ({
+        tenantid: t.tenantid,
+        count: t.count,
+        _dst: cur[t.tenantid] || ''
+    }));
+    renderTenantRows(merged);
+    toast('共扫描到 ' + tenants.length + ' 个不同 tenantid', '✅ 完成');
+}
+
+async function saveTenantMap() {
+    const mapping = {};
+    document.querySelectorAll('#tenantMapBody input[data-tenant-src]').forEach(inp => {
+        const src = inp.getAttribute('data-tenant-src');
+        const dst = inp.value.trim();
+        if (src) mapping[src] = dst;
+    });
+    const r = await postJSON('/api/tenant_map', {mapping});
+    toast(r.msg, r.code === 0 ? '✅ 已保存' : '❌ 错误', r.code !== 0);
+}
+
+async function clearTenantMap() {
+    if (!confirm('确认清空所有租户映射？')) return;
+    const r = await postJSON('/api/tenant_map', {mapping: {}});
+    toast(r.msg);
+    await loadTenantMap();
+}
+
+loadTableMap();
+loadTenantMap();
+
+async function buildMapping(t) {
+    const r = await postJSON('/api/mapping/' + t, {});
+    if (r.code === 0) {
+        let n = r.data.notes;
+        toast(`共 ${r.data.mappings.length} 个字段；跳过源独有 ${n.src_only.length} 个；类型差异 ${n.type_diff.length} 个自动 CAST。`, '✅ 已生成映射: ' + t);
+    } else {
+        toast(r.msg, '❌ 错误', true);
+    }
+}
+
+async function showMapping(t) {
+    _curTable = t;
+    document.getElementById('mappingTitle').innerText = t;
+    const r = await getJSON('/api/mapping/' + t);
+    const body = document.getElementById('mappingBody');
+    const notes = document.getElementById('mappingNotes');
+    if (r.code !== 0 || !r.data || r.data.length === 0) {
+        body.innerHTML = '<tr><td colspan="4" style="text-align:center;color:#6c757d;">还没有映射，请先点击 "生成映射"</td></tr>';
+        notes.style.display = 'none';
+    } else {
+        body.innerHTML = r.data.map(m => {
+            const label = m.src
+                ? '<span class="badge badge-success">直接迁移</span>'
+                : ((m.default !== '' && m.default !== null)
+                    ? '<span class="badge badge-warning">默认值</span>'
+                    : '<span class="badge badge-secondary">空</span>');
+            const src = m.src ? '<code>' + m.src + '</code>' : '<span style="color:#adb5bd">-</span>';
+            const def = (m.default === '' || m.default === null) ? '<code>""</code>' : '<code>' + m.default + '</code>';
+            return `<tr>
+                <td><code>${m.dst}</code></td>
+                <td>${src}</td>
+                <td>${def}</td>
+                <td>${label}</td>
+            </tr>`;
+        }).join('');
+        notes.style.display = 'none';
+    }
+    document.getElementById('mappingModal').classList.add('show');
+}
+
+function start(t) {
+    _curTable = t;
+    document.getElementById('migTitle').innerText = t;
+    document.getElementById('migTimeFrom').value = '';
+    document.getElementById('migTimeTo').value = '2025-12-31T23:59:59';
+    document.getElementById('migrateModal').classList.add('show');
+}
+
+async function doStart() {
+    if (!_curTable) return;
+    const payload = {
+        table: _curTable,
+        page_size: parseInt(document.getElementById('migPageSize').value),
+        time_from: document.getElementById('migTimeFrom').value.replace('T', ' '),
+        time_to: document.getElementById('migTimeTo').value.replace('T', ' ')
+    };
+    const r = await postJSON('/api/migrate', payload);
+    if (r.code === 0 && r.data && r.data.no_need) {
+        toast(r.msg, '🟡 无需迁移');
+    } else {
+        toast(r.msg, r.code === 0 ? '✅ 成功' : '❌ 错误', r.code !== 0);
+    }
+    if (r.code === 0) {
+        document.getElementById('migrateModal').classList.remove('show');
+        setTimeout(refreshAll, 1000);
+    }
+}
+
+async function pause(t) {
+    const r = await postJSON('/api/migrate/stop', {table: t});
+    toast(r.msg);
+}
+
+async function reset(t) {
+    if (!confirm('确认要重置 ' + t + ' 的迁移进度吗？已迁移数据保留，仅清空断点。')) return;
+    const r = await postJSON('/api/reset/' + t, {});
+    toast(r.msg);
+    refreshAll();
+}
+
+async function count(t) {
+    const r = await postJSON('/api/progress/' + t, {
+        time_to: '2025-12-31 23:59:59'
+    });
+    if (r.code === 0) {
+        document.getElementById('total-' + t).innerText = r.data.total;
+        toast('总数: ' + r.data.total, '✅ ' + t);
+    } else {
+        toast(r.msg, '❌ 错误', true);
+    }
+}
+
+async function refreshAll() {
+    const r = await getJSON('/api/progress');
+    if (r.code !== 0) return;
+    const colors = {'pending':'secondary','running':'success','done':'primary','paused':'warning','error':'danger'};
+    r.data.tasks.forEach(t => {
+        const tn = document.getElementById('total-' + t.table_name);
+        if (!tn) return;
+        tn.innerText = t.total || 0;
+        document.getElementById('migrated-' + t.table_name).innerText = t.migrated || 0;
+        document.getElementById('failed-' + t.table_name).innerText = t.failed || 0;
+        const bar = document.getElementById('bar-' + t.table_name);
+        const pct = t.total ? (t.migrated / t.total * 100) : 0;
+        bar.style.width = pct + '%';
+        const stSpan = document.getElementById('status-' + t.table_name);
+        if (stSpan) {
+            stSpan.innerText = t.status || 'pending';
+            stSpan.className = 'badge badge-' + (colors[t.status] || 'secondary');
+        }
+    });
+}
+refreshAll();
+setInterval(refreshAll, 3000);
+</script>
+{% endblock %}

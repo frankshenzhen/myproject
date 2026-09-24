@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% block title %}迁移进度{% endblock %}
+{% block content %}
+<div class="card">
+    <div class="card-header">
+        📊 整体进度
+        <button class="btn btn-sm btn-outline-danger" style="float:right;" onclick="resetAll()">全部重置</button>
+    </div>
+    <div class="card-body">
+        <div class="row g-3">
+            <div class="col">
+                <div class="summary-card">
+                    <div class="label">总记录数</div>
+                    <div class="value text-primary" id="sumTotal">0</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="summary-card">
+                    <div class="label">已迁移</div>
+                    <div class="value text-success" id="sumMigrated">0</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="summary-card">
+                    <div class="label">失败</div>
+                    <div class="value text-danger" id="sumFailed">0</div>
+                </div>
+            </div>
+            <div class="col">
+                <div class="summary-card">
+                    <div class="label">完成率</div>
+                    <div class="value text-primary" id="sumPct">0%</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">📋 各表详情</div>
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>表名</th>
+                    <th>状态</th>
+                    <th>进度</th>
+                    <th>总数 / 已迁 / 失败</th>
+                    <th>当前断点</th>
+                    <th>起止时间</th>
+                    <th>错误</th>
+                </tr>
+            </thead>
+            <tbody id="taskRows">
+                {% for t in tables %}
+                <tr>
+                    <td><code>{{ t }}</code></td>
+                    <td colspan="6" style="text-align:center;color:#6c757d;">加载中...</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+const COLORS = {'pending':'secondary','running':'success','done':'primary','paused':'warning','error':'danger'};
+function esc(s) { return (s == null ? '' : String(s)).replace(/</g, '&lt;'); }
+
+async function refreshAll() {
+    const r = await getJSON('/api/progress');
+    if (r.code !== 0) return;
+    const s = r.data.summary;
+    document.getElementById('sumTotal').innerText = s.total;
+    document.getElementById('sumMigrated').innerText = s.migrated;
+    document.getElementById('sumFailed').innerText = s.failed;
+    document.getElementById('sumPct').innerText = s.total ? (s.migrated / s.total * 100).toFixed(2) + '%' : '0%';
+
+    const tasks = r.data.tasks;
+    const body = document.getElementById('taskRows');
+    if (!tasks || tasks.length === 0) {
+        body.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6c757d;">暂无任务，请到表管理启动迁移</td></tr>';
+        return;
+    }
+    body.innerHTML = tasks.map(t => {
+        const pct = t.total ? (t.migrated / t.total * 100) : 0;
+        const st = t.status || 'pending';
+        const c = COLORS[st] || 'secondary';
+        return `<tr>
+            <td><code>${t.table_name}</code></td>
+            <td><span class="badge badge-${c}">${st}</span></td>
+            <td>
+                <div class="progress" style="height:8px;">
+                    <div class="progress-bar bg-${c}" style="width:${pct}%"></div>
+                </div>
+                <small>${pct.toFixed(2)}%</small>
+            </td>
+            <td>${t.total || 0} / ${t.migrated || 0} / ${t.failed || 0}</td>
+            <td><code style="font-size:12px;">${esc(t.last_pk).slice(0, 32)}</code></td>
+            <td><small>${esc(t.time_from)}<br>${esc(t.time_to)}</small></td>
+            <td><small style="color:#dc3545;">${esc(t.err_msg)}</small></td>
+        </tr>`;
+    }).join('');
+}
+
+async function resetAll() {
+    if (!confirm('确认清空所有迁移进度？已迁移数据保留。')) return;
+    const r = await postJSON('/api/reset_all', {});
+    toast(r.msg);
+    refreshAll();
+}
+refreshAll();
+setInterval(refreshAll, 2000);
+</script>
+{% endblock %}

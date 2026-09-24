@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}概览{% endblock %}
+{% block content %}
+
+<div class="card">
+    <div class="card-header">📋 工具使用步骤</div>
+    <div class="card-body">
+        <ol style="padding-left:20px; line-height:1.9;">
+            <li><a href="/config">「数据库配置」</a> 填写源/目标库连接信息，测试连接。</li>
+            <li><a href="/tables">「表管理」</a> 选择表，点击「生成映射」自动对比 R1/V5 字段，V5 独有字段补默认值。</li>
+            <li>设置时间范围（默认迁移 2026 年之前数据），点击「启动」开始迁移。</li>
+            <li><a href="/progress">「迁移进度」</a> 查看实时进度、可暂停/恢复。</li>
+            <li><strong>断点重试：</strong> 按主键分批迁移，自动记录 <code>last_pk</code>；中断后再次启动会继续迁移剩余数据。</li>
+            <li><a href="/logs">「迁移日志」</a> 查看每个批次详情（主键范围、耗时、错误信息）。</li>
+        </ol>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">🎯 支持迁移的 6 张表</div>
+    <div class="card-body">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>序号</th><th>表名</th><th>主键</th><th>时间字段（过滤用）</th><th>说明</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tables %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td><code>{{ t }}</code></td>
+                    <td><code>id</code> (varchar(36))</td>
+                    <td><code>{{ time_fields.get(t, '-') }}</code></td>
+                    <td>
+                        {% if t == 'ts_leave_apply' %}休假主表
+                        {% elif t == 'ts_leave_apply_detail' %}休假日明细
+                        {% elif t == 'ts_leave_off_detail' %}销假日明细
+                        {% elif t == 'ts_business_trip_apply' %}出差主表
+                        {% elif t == 'ts_business_trip_apply_detail' %}出差明细
+                        {% elif t == 'ts_business_trip_revoke_detail' %}出差销差明细
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="row g-2">
+<div class="col">
+<div class="card">
+    <div class="card-header">🧱 R1 → V5 字段差异要点</div>
+    <div class="card-body">
+        <ul style="padding-left:20px; line-height:1.8;">
+            <li>整数列：<code>int(1)/int(4)/tinyint</code> → <code>int(11)</code>，<strong>兼容</strong>。</li>
+            <li><code>decimal(16,1)</code> → <code>decimal(16,2)</code>，迁移时由 SQL <code>CAST</code> 处理。</li>
+            <li>字符串长度变化（<code>varchar(36)</code>→<code>varchar(72)</code>、<code>512</code>→<code>2048</code>）：<strong>兼容</strong>。</li>
+            <li>源表 <code>hour_to_day</code>、<code>carbon_copy_staff_id</code>、<code>original_data</code>、<code>show_unit</code> 等字段目标库不存在，<strong>跳过</strong>。</li>
+            <li>目标独有字段（<code>code</code>、<code>status</code>、<code>vouchdate</code>、<code>inner_leave_type_id</code> 等）按默认配置补默认值。</li>
+        </ul>
+    </div>
+</div>
+</div>
+<div class="col">
+<div class="card">
+    <div class="card-header">⚠️ 注意事项</div>
+    <div class="card-body">
+        <ul style="padding-left:20px; line-height:1.8;">
+            <li>首次运行必须先在「表管理」生成字段映射。</li>
+            <li>目标库已存在数据时，遇到主键重复会跳过重复行。</li>
+            <li>迁移按 <code>id ASC</code> 顺序 + 时间范围筛选，<strong>断点重试安全</strong>。</li>
+            <li>建议先备份或在测试环境验证。</li>
+            <li>运行 <code>stop</code> 后当前批次完成后即停止（断点已保存）。</li>
+        </ul>
+    </div>
+</div>
+</div>
+</div>
+{% endblock %}
