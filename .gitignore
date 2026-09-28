@@ -12,3 +12,8 @@ logs/
 .vscode/
 *.swp
 .DS_Store
+
+# PyInstaller 构建产物
+build/
+dist/
+*.spec
