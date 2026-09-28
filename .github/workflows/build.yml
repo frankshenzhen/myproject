@@ -14,9 +14,6 @@ jobs:
       matrix:
         os: [macos-latest, windows-latest, ubuntu-latest]
     runs-on: ${{ matrix.os }}
-    defaults:
-      run:
-        working-directory: doc/data-migrate-tool
     steps:
       - uses: actions/checkout@v4
 
@@ -41,8 +38,8 @@ jobs:
         run: |
           cd dist
           if [ "$RUNNER_OS" == "Windows" ]; then
-            # Windows PowerShell 内置 Compress-Archive
-            powershell -NoProfile -Command "Compress-Archive -Path 'hrcloud-migrate/hrcloud-migrate.exe' -DestinationPath 'hrcloud-migrate-windows.zip' -Force"
+            # 单文件压缩（onefile 模式产物：dist/hrcloud-migrate.exe）
+            powershell -NoProfile -Command "Compress-Archive -Path 'hrcloud-migrate.exe' -DestinationPath 'hrcloud-migrate-windows.zip' -Force"
           else
             tar -czf "hrcloud-migrate-${{ matrix.os }}.tar.gz" hrcloud-migrate
           fi
@@ -54,11 +51,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: hrcloud-migrate-${{ matrix.os }}
-          path: doc/data-migrate-tool/dist/hrcloud-migrate-*.*
+          path: dist/hrcloud-migrate-*.*
 
       - name: Attach to release (only on tag)
         if: startsWith(github.ref, 'refs/tags/')
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            doc/data-migrate-tool/dist/hrcloud-migrate-*.*
+            dist/hrcloud-migrate-*.*
