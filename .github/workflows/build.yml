@@ -36,7 +36,7 @@ jobs:
           python tools/build.py --no-install
           echo "---"
           echo "Artifacts:"
-          python -c "import os; [print(f'{os.path.getsize(os.path.join(\"dist\", n)):>10}  dist/{n}') for n in sorted(os.listdir('dist'))]"
+          python tools/list_artifacts.py dist
 
       - name: Package artifact (Windows)
         if: matrix.os == 'windows-latest'
