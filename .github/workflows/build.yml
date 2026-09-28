@@ -23,28 +23,38 @@ jobs:
           python-version: '3.11'
 
       - name: Install build deps
+        env:
+          PYTHONIOENCODING: utf-8
         run: |
           python -m pip install --upgrade pip
           pip install pyinstaller>=6.0
 
       - name: Build executable
+        env:
+          PYTHONIOENCODING: utf-8
         run: |
           python tools/build.py --no-install
           echo "---"
-          echo "产物："
-          ls -lh dist/
+          echo "Artifacts:"
+          python -c "import os; [print(f'{os.path.getsize(os.path.join(\"dist\", n)):>10}  dist/{n}') for n in sorted(os.listdir('dist'))]"
 
-      - name: Package artifact
+      - name: Package artifact (Windows)
+        if: matrix.os == 'windows-latest'
+        shell: pwsh
         run: |
           cd dist
-          if [ "$RUNNER_OS" == "Windows" ]; then
-            # 单文件压缩（onefile 模式产物：dist/hrcloud-migrate.exe）
-            powershell -NoProfile -Command "Compress-Archive -Path 'hrcloud-migrate.exe' -DestinationPath 'hrcloud-migrate-windows.zip' -Force"
-          else
-            tar -czf "hrcloud-migrate-${{ matrix.os }}.tar.gz" hrcloud-migrate
-          fi
+          Compress-Archive -Path 'hrcloud-migrate.exe' -DestinationPath 'hrcloud-migrate-windows.zip' -Force
+          Write-Host "---"
+          Write-Host "After packaging:"
+          Get-ChildItem | Select-Object Name, @{N='SizeBytes';E={$_.Length}} | Format-Table -AutoSize
+
+      - name: Package artifact (Unix)
+        if: matrix.os != 'windows-latest'
+        run: |
+          cd dist
+          tar -czf "hrcloud-migrate-${{ matrix.os }}.tar.gz" hrcloud-migrate
           echo "---"
-          echo "打包后："
+          echo "After packaging:"
           ls -lh .
 
       - name: Upload artifact

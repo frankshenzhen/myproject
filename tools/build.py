@@ -13,6 +13,11 @@ import subprocess
 import sys
 from pathlib import Path
 
+# Windows 默认 cp1252 编码无法打印中文 / Emoji，强制 UTF-8
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+    sys.stderr.reconfigure(encoding="utf-8")
+
 ROOT = Path(__file__).resolve().parent.parent
 OS_NAME = platform.system().lower()
 # PyInstaller 的 --add-data 分隔符：类 Unix 用 :，Windows 用 ;
