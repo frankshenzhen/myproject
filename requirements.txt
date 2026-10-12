@@ -4,4 +4,6 @@ PyMySQL>=1.1
 APScheduler>=3.10
 
 # 构建时依赖（仅打包阶段使用，可通过 tools/build.py 自动安装）
-pyinstaller>=6.0
+# 锁 6.10.0：6.15+ 对 Flask 3.x 有包识别 bug（"flask is not a package"），
+# 会导致 --collect-all=flask 静默失效，打出来的 exe 缺 flask 全家桶
+pyinstaller==6.10.0

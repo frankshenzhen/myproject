@@ -37,8 +37,9 @@ def clean():
 
 def install_pyinstaller():
     print(">>> 安装 pyinstaller ...", flush=True)
+    # 锁版本：6.15+ 对 Flask 3.x 的包识别有 bug，会导致 flask 漏打进 exe
     subprocess.check_call(
-        [sys.executable, "-m", "pip", "install", "-q", "pyinstaller>=6.0"]
+        [sys.executable, "-m", "pip", "install", "-q", "pyinstaller==6.10.0"]
     )
 
 

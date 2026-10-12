@@ -27,7 +27,8 @@ jobs:
           PYTHONIOENCODING: utf-8
         run: |
           python -m pip install --upgrade pip
-          pip install pyinstaller>=6.0
+          # 锁 6.10.0：6.15+ 对 Flask 3.x 有 "is not a package" 漏收集 bug
+          pip install pyinstaller==6.10.0
 
       - name: Build executable
         env:
